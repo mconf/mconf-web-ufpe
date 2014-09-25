@@ -9,15 +9,4 @@
   - unless current_site.external_help.blank?
     %li= link_to t('.links.help'), current_site.external_help
   %li
-    - if I18n.locale == :"pt-br"
-      - locale = :en
-      - flag = image_tag("flags/" + locale.to_s + ".png", :title => locale.to_s)
-      - text = t('locales.' + locale.to_s)
-      - link = link_to(text, main_app.session_locale_path(:l => locale.to_s), :method => :post)
-      = (link + " " + flag).html_safe
-    - else
-      - locale = :"pt-br"
-      - flag = image_tag("flags/" + locale.to_s + ".png", :title => locale.to_s)
-      - text = t('locales.' + locale.to_s)
-      - link = link_to(text, main_app.session_locale_path(:l => locale.to_s), :method => :post)
-      = (link + " " + flag).html_safe
+    = render :partial => "shared/language_links"

@@ -1,18 +1,10 @@
-- content_for :navbar do
-  #navbar
-    #main-logo
-      %a.title{:href => root_path}= image_tag 'logos/mconf-white-transp.png', :size => '231x120'
-
-- content_for :page_header do
-  - if current_site.name.blank?
-    = t(".headline")
-  - else
-    - headline = current_site.name
-    - unless current_site.description.blank?
-      - headline += ": " + current_site.description
-    = headline
-
 #content
+
+  #trademark-introduction
+    = image_tag "ufpe/logo.png", size: "300x106"
+    .headline
+      = t(".headline")
+    = link_to t('.register.title'), register_path, class: "btn btn-danger btn-large"
 
   - if current_site.local_auth_enabled? || current_site.ldap_enabled?
     #login-box.form-area
@@ -23,8 +15,7 @@
           - if current_site.shib_enabled?
             %li= link_to t('.login.federation'), shibboleth_path, :class => 'shibboleth_login'
           %li= link_to t('.login.lost_password'), new_user_password_path
-
-  - if current_site.registration_enabled?
-    #registration-box.form-area
-      %h2= t('.register.title')
-      = render :partial => 'registrations/signup_form'
+          - unless current_site.external_help.blank?
+            %li= link_to t('.links.help'), current_site.external_help
+          %li
+            = render :partial => "shared/language_links"

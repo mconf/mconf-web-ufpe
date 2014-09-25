@@ -1,5 +1,16 @@
 ---
 pt-br:
+  frontpage:
+    show:
+      headline: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent id sem varius, viverra tellus eget, hendrerit erat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus efficitur lectus non augue interdum, quis ultricies mauris finibus. Donec at eros tempus, cursus diam at, efficitur eros. Cras eget nulla eget magna bibendum euismod. Aenean quis nibh iaculis, interdum metus in, tristique nibh. Pellentesque non posuere dolor, id mollis leo. Nunc finibus sem sed euismod blandit."
+      links:
+        help: "FAQ/Ajuda"
+      login:
+        #federation: "Login via federação"
+        lost_password: "Esqueceu sua senha?"
+        title: "Login"
+      register:
+        title: "Registre-se"
   layouts:
     application_navbar_top:
       links:
@@ -7,3 +18,6 @@ pt-br:
   locales:
     en: "Version in English"
     pt-br: "Versão em Português"
+  sessions:
+    login_form:
+      login: "Entrar"
