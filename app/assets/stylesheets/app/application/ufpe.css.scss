@@ -75,7 +75,6 @@
 #footer-wrapper {
   background: image-url('ufpe/footer-bg.png') repeat scroll center top transparent;
   color: $footer-font-color;
-  border: 0;
 }
 
 #footer {
@@ -102,13 +101,12 @@
 
   .mconftec {
     float: right;
-    margin: 10px 0 0 0;
-    clear: right;
+    margin: 30px 10px 0 0;
 
     img {
       width: 32px;
       height: 32px;
-      @include transition(opacity 1s, background 1s);
+      @include transition(opacity .5s, background .5s);
       opacity: 0.6;
       padding: 3px;
       @include border-radius(4px);
@@ -122,12 +120,12 @@
 
   .mconf {
     float: right;
-    margin: 10px 0 0 0;
+    margin: 30px 10px 0 0;
 
     img {
       width: 28px;
       height: 28px;
-      @include transition(opacity 1s, background 1s);
+      @include transition(opacity .5s, background .5s);
       opacity: 0.6;
       padding: 6px;
       @include border-radius(4px);
