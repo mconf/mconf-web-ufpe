@@ -72,6 +72,8 @@ module Mconf
     # Version of your assets, change this if you want to expire all your assets
     config.assets.version = '1.0'
 
+    config.assets.paths << "#{Rails.root}/app/assets/fonts"
+
     # all view helpers loaded for all views
     config.action_controller.include_all_helpers = true
 

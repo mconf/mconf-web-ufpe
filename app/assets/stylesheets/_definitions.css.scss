@@ -233,6 +233,13 @@ $mail-font-size: $font-normal;
 
 // UFPE
 $ufpe-footer-dark-gray: #222222;
+@font-face {
+  font-family: 'Coda Regular';
+  src: url('/assets/coda-regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 // overrides
 $navbar-bg-color-dark: #00566c;
 $navbar-bg-color-light: #02627a;
@@ -242,3 +249,4 @@ $navbar-height: 37px;
 $footer-height: 125px;
 $footer-bg-color: $ufpe-footer-dark-gray;
 $footer-font-color: #eee;
+$font-family: 'Coda Regular';
