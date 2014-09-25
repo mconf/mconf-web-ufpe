@@ -230,3 +230,15 @@ $mail-font-size: $font-normal;
     }
   }
 }
+
+// UFPE
+$ufpe-footer-dark-gray: #222222;
+// overrides
+$navbar-bg-color-dark: #00566c;
+$navbar-bg-color-light: #02627a;
+$navbar-top-bg-color-top: #fff;
+$navbar-top-bg-color-bottom: #c3c3c3;
+$navbar-height: 37px;
+$footer-height: 125px;
+$footer-bg-color: $ufpe-footer-dark-gray;
+$footer-font-color: #eee;

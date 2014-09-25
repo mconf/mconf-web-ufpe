@@ -1,0 +1,141 @@
+@import "compass/css3";
+@import "compass/typography/links";
+@import "definitions";
+
+#navbar-top-wrapper {
+  margin: 0;
+  padding: 0 10px;
+  background: $navbar-top-bg-color-bottom;
+  @include background(linear-gradient(top, $navbar-top-bg-color-top, $navbar-top-bg-color-bottom));
+}
+
+#navbar-top {
+  width: $contents-width;
+  margin: 0 auto;
+  padding: 0;
+  @include mconf-clearfix;
+
+  ul {
+    margin: 0;
+  }
+
+  #main-logo {
+    margin: 8px;
+    width: 255px;
+    height: 90px;
+  }
+
+  .help-links {
+    float: right;
+    margin: 20px 10px 0 0;
+
+    li {
+      display: inline;
+      padding-left: 10px;
+      margin-left: 10px;
+      border-left: 1px solid #ccc;
+      &:first-child { border: 0; }
+    }
+  }
+}
+
+#navbar-wrapper {
+  @include background(linear-gradient(top, $navbar-bg-color-light, $navbar-bg-color-dark));
+}
+
+#navbar {
+  #navbar-right-links {
+    li {
+      border-left: 1px solid #666;
+      padding-left: 15px;
+      margin-left: 15px;
+      padding-right: 0;
+      margin-right: 0;
+    }
+  }
+
+  ul#navbar-left-links {
+    li {
+      border-right: 1px solid #666;
+      padding-right: 15px;
+      margin-right: 15px;
+      padding-left: 0;
+      margin-left: 0;
+
+      &:last-child { border: 0; }
+    }
+  }
+}
+
+#navbar #navbar-right-links .user-info-dropdown {
+  padding-top: 5px;
+  padding-bottom: 4px;
+}
+
+#footer-wrapper {
+  background: image-url('ufpe/footer-bg.png') repeat scroll center top transparent;
+  color: $footer-font-color;
+  border: 0;
+}
+
+#footer {
+  margin: 15px auto;
+  color: $footer-font-color;
+
+  a {
+    @include link-colors($footer-font-color, $link-color-hover, $link-color-active, $footer-font-color);
+  }
+
+  #footer-logo img {
+    width: 181px;
+    height: 94px;
+  }
+
+  #footer-copyright {
+    float: left;
+    margin: 40px 0 0 40px;
+
+    span {
+      display: block;
+    }
+  }
+
+  .mconftec {
+    float: right;
+    margin: 10px 0 0 0;
+    clear: right;
+
+    img {
+      width: 32px;
+      height: 32px;
+      @include transition(opacity 1s, background 1s);
+      opacity: 0.6;
+      padding: 3px;
+      @include border-radius(4px);
+    }
+
+    img:hover {
+      opacity: 1;
+      background: #111;
+    }
+  }
+
+  .mconf {
+    float: right;
+    margin: 10px 0 0 0;
+
+    img {
+      width: 28px;
+      height: 28px;
+      @include transition(opacity 1s, background 1s);
+      opacity: 0.6;
+      padding: 6px;
+      @include border-radius(4px);
+    }
+
+    img:hover {
+      opacity: 1;
+      background: #111;
+    }
+  }
+}

@@ -22,6 +22,9 @@
 
   %body{:class => "#{controller_name_for_view} #{params[:action]}"}
     #site
+      #navbar-top-wrapper
+        #navbar-top
+          = render :partial => 'layouts/application_navbar_top'
       #navbar-wrapper
         #navbar
           = render :partial => 'layouts/application_navbar'

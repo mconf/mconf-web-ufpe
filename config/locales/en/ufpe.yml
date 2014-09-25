@@ -1,0 +1,9 @@
+---
+en:
+  layouts:
+    application_navbar_top:
+      links:
+        help: "FAQ/Help"
+  locales:
+    en: "Version in English"
+    pt-br: "Versão em Português"
