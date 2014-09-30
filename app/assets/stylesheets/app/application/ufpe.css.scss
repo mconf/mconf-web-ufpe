@@ -162,19 +162,19 @@ body.frontpage.show {
   #trademark-introduction {
     float: left;
     width: 450px;
-    margin-left: 50px;
     text-align: center;
 
     //border: 1px solid green;
 
     img {
-      width: 300px;
-      height: 106px;
+      width: 460px;
+      height: 164px;
     }
 
     .headline {
       text-align: left;
-      margin: 25px 0;
+      margin: 15px 0;
+      text-align: justify;
     }
 
     .btn {
@@ -204,6 +204,10 @@ body.frontpage.show {
       padding: 15px;
       margin-bottom: 20px;
       width: 90%;
+
+      .input abbr {
+        display: inline-block;
+      }
     }
 
     .action-links {

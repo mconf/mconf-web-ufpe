@@ -2,7 +2,7 @@
 pt-br:
   frontpage:
     show:
-      headline: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent id sem varius, viverra tellus eget, hendrerit erat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus efficitur lectus non augue interdum, quis ultricies mauris finibus. Donec at eros tempus, cursus diam at, efficitur eros. Cras eget nulla eget magna bibendum euismod. Aenean quis nibh iaculis, interdum metus in, tristique nibh. Pellentesque non posuere dolor, id mollis leo. Nunc finibus sem sed euismod blandit."
+      headline: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent id sem varius, viverra tellus eget, hendrerit erat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus efficitur lectus non augue interdum, quis ultricies mauris finibus. Donec at eros tempus, cursus diam at, efficitur eros. Cras eget nulla eget magna bibendum euismod. Aenean quis nibh iaculis, interdum metus in, tristique nibh."
       links:
         help: "FAQ/Ajuda"
       login:
