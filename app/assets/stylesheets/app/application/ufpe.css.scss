@@ -139,10 +139,11 @@
 }
 
 body.frontpage.show {
+  background-color: #3c3c3c;
 
   #site {
     background: #424242;
-    background: image-url('ufpe/frontpage-bg.png') repeat-x scroll center bottom transparent;
+    background: image-url('ufpe/frontpage-bg.jpg') repeat-x scroll center top transparent;
   }
 
   #navbar-wrapper {
