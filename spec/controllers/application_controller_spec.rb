@@ -365,7 +365,7 @@ describe ApplicationController do
     context "if there's no user logged returns false" do
       let(:room) { FactoryGirl.create(:bigbluebutton_room) }
       before(:each) { get :index, :room_id => room.id }
-      it { assigns(:result).should eql({ :record_meeting => false }) }
+      it { assigns(:result).should eql({ record: false }) }
     end
 
     context "if there's a user logged" do
@@ -385,16 +385,16 @@ describe ApplicationController do
           before { Site.current.update_attributes(:webconf_auto_record => true) }
 
           context "and the room is set to record" do
-            before { room.update_attributes("record_meeting" => true) }
+            before { room.update_attributes(record_meeting: true) }
             before(:each) { get :index, :room_id => room.id }
-            it { assigns(:result).should eql({ :record_meeting => true }) }
+            it { assigns(:result).should eql({ record: true }) }
           end
 
           context "and the room is not set to record" do
-            before { room.update_attributes("record_meeting" => false) }
+            before { room.update_attributes(record_meeting: false) }
             before(:each) { get :index, :room_id => room.id }
             # uses the user's permission only, ignores that the room is not set to record
-            it { assigns(:result).should eql({ :record_meeting => true }) }
+            it { assigns(:result).should eql({ record: true }) }
           end
         end
 
@@ -402,15 +402,15 @@ describe ApplicationController do
           before { Site.current.update_attributes(:webconf_auto_record => false) }
 
           context "and the room is set to record" do
-            before { room.update_attributes("record_meeting" => true) }
+            before { room.update_attributes(record_meeting: true) }
             before(:each) { get :index, :room_id => room.id }
-            it { assigns(:result).should eql({ :record_meeting => true }) }
+            it { assigns(:result).should eql({ record: true }) }
           end
 
           context "and the room is not set to record" do
-            before { room.update_attributes("record_meeting" => false) }
+            before { room.update_attributes(record_meeting: false) }
             before(:each) { get :index, :room_id => room.id }
-            it { assigns(:result).should eql({ :record_meeting => false }) }
+            it { assigns(:result).should eql({ record: false }) }
           end
         end
 
@@ -423,15 +423,15 @@ describe ApplicationController do
           before { Site.current.update_attributes(:webconf_auto_record => true) }
 
           context "and the room is set to record" do
-            before { room.update_attributes("record_meeting" => true) }
+            before { room.update_attributes(record_meeting: true) }
             before(:each) { get :index, :room_id => room.id }
-            it { assigns(:result).should eql({ :record_meeting => false }) }
+            it { assigns(:result).should eql({ record: false }) }
           end
 
           context "and the room is not set to record" do
-            before { room.update_attributes("record_meeting" => false) }
+            before { room.update_attributes(record_meeting: false) }
             before(:each) { get :index, :room_id => room.id }
-            it { assigns(:result).should eql({ :record_meeting => false }) }
+            it { assigns(:result).should eql({ record: false }) }
           end
         end
 
@@ -439,20 +439,133 @@ describe ApplicationController do
           before { Site.current.update_attributes(:webconf_auto_record => false) }
 
           context "and the room is set to record" do
-            before { room.update_attributes("record_meeting" => true) }
+            before { room.update_attributes(record_meeting: true) }
             before(:each) { get :index, :room_id => room.id }
-            it { assigns(:result).should eql({ :record_meeting => false }) }
+            it { assigns(:result).should eql({ record: false }) }
           end
 
           context "and the room is not set to record" do
-            before { room.update_attributes("record_meeting" => false) }
+            before { room.update_attributes(record_meeting: false) }
             before(:each) { get :index, :room_id => room.id }
-            it { assigns(:result).should eql({ :record_meeting => false }) }
+            it { assigns(:result).should eql({ record: false }) }
           end
         end
 
       end
     end
+  end
+
+  context "rescue from exceptions" do
+
+    skip "if consider_all_requests_local is true"
+
+    context "if consider_all_requests_local is false" do
+      before {
+        @before_consider_all_requests_local = Rails.application.config.consider_all_requests_local
+        Rails.application.config.consider_all_requests_local = false
+        ExceptionNotifier.stub(:notify_exception)
+      }
+      after {
+        Rails.application.config.consider_all_requests_local = @before_consider_all_requests_local
+      }
+
+      context "from general exceptions" do
+        controller do
+          def index
+            raise Exception.new("Anything")
+          end
+        end
+
+        before(:each) { get :index }
+
+        it { should respond_with(500) }
+        it { should render_template("errors/error_500") }
+        it { assigns(:exception).should be_an_instance_of(Exception) }
+        it { assigns(:exception).message.should eql("Anything") }
+        it { expect(ExceptionNotifier).to have_received(:notify_exception).once.with(an_instance_of(Exception)) }
+      end
+
+      context "from ActiveRecord::RecordNotFound" do
+        controller do
+          def index
+            raise ActiveRecord::RecordNotFound.new("Anything")
+          end
+        end
+
+        before(:each) { get :index }
+
+        it { should respond_with(404) }
+        it { should render_template("errors/error_404") }
+        it { assigns(:exception).should be_an_instance_of(ActiveRecord::RecordNotFound) }
+        it { assigns(:exception).message.should eql("Anything") }
+        it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+      end
+
+      context "from ActionController::RoutingError" do
+        controller do
+          def index
+            raise ActionController::RoutingError.new("Anything")
+          end
+        end
+
+        before(:each) { get :index }
+
+        it { should respond_with(404) }
+        it { should render_template("errors/error_404") }
+        it { assigns(:exception).should be_an_instance_of(ActionController::RoutingError) }
+        it { assigns(:exception).message.should eql("Anything") }
+        it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+      end
+
+      context "from ActionController::UnknownController" do
+        controller do
+          def index
+            raise ActionController::UnknownController.new("Anything")
+          end
+        end
+
+        before(:each) { get :index }
+
+        it { should respond_with(404) }
+        it { should render_template("errors/error_404") }
+        it { assigns(:exception).should be_an_instance_of(ActionController::UnknownController) }
+        it { assigns(:exception).message.should eql("Anything") }
+        it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+      end
+
+      context "from ::AbstractController::ActionNotFound" do
+        controller do
+          def index
+            raise ::AbstractController::ActionNotFound.new("Anything")
+          end
+        end
+
+        before(:each) { get :index }
+
+        it { should respond_with(404) }
+        it { should render_template("errors/error_404") }
+        it { assigns(:exception).should be_an_instance_of(::AbstractController::ActionNotFound) }
+        it { assigns(:exception).message.should eql("Anything") }
+        it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+      end
+
+      context "from CanCan::AccessDenied" do
+        controller do
+          def index
+            raise CanCan::AccessDenied.new("Anything")
+          end
+        end
+
+        before(:each) { get :index }
+
+        it { should respond_with(403) }
+        it { should render_template("errors/error_403") }
+        it { assigns(:exception).should be_an_instance_of(CanCan::AccessDenied) }
+        it { assigns(:exception).message.should eql("Anything") }
+        it { expect(ExceptionNotifier).not_to have_received(:notify_exception) }
+      end
+    end
+
   end
 
 end

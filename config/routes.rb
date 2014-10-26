@@ -39,7 +39,8 @@ Mconf::Application.routes.draw do
   bigbluebutton_routes :default, :controllers => {
     :servers => 'custom_bigbluebutton_servers',
     :rooms => 'custom_bigbluebutton_rooms',
-    :recordings => 'custom_bigbluebutton_recordings'
+    :recordings => 'custom_bigbluebutton_recordings',
+    :playback_types => 'custom_bigbluebutton_playback_types'
   }
   # register a few custom routes that were added to bigbluebutton_rails
   get '/bigbluebutton/rooms/:id/join_options',
@@ -51,6 +52,9 @@ Mconf::Application.routes.draw do
   post '/bigbluebutton/rooms/:id/send_invitation',
     :to => 'custom_bigbluebutton_rooms#send_invitation',
     :as => "send_invitation_bigbluebutton_room"
+  get '/bigbluebutton/playback_types',
+    :to => 'custom_bigbluebutton_playback_types#index',
+    :as => "bigbluebutton_playback_types"
   # shortcut route to join webconference rooms
   get '/webconf/:id',
     :to => 'custom_bigbluebutton_rooms#invite_userid',
@@ -147,6 +151,7 @@ Mconf::Application.routes.draw do
   get '/room/edit', :to => 'my#edit_room', :as => 'edit_my_room'
   get '/recordings', :to => 'my#recordings', :as => 'my_recordings'
   get '/recordings/:id/edit', :to => 'my#edit_recording', :as => 'edit_my_recording'
+  get '/pending', :to => 'my#approval_pending', :as => 'my_approval_pending'
 
   resources :messages, :controller => :private_messages, :except => [:edit]
 

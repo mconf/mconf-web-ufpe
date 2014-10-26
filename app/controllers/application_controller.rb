@@ -26,13 +26,25 @@ class ApplicationController < ActionController::Base
   helper_method :current_site
 
   # Handle errors - error pages
-  unless Rails.application.config.consider_all_requests_local
-    rescue_from Exception, :with => :render_500
-    rescue_from ActiveRecord::RecordNotFound, :with => :render_404
-    rescue_from ActionController::RoutingError, :with => :render_404
-    rescue_from ActionController::UnknownController, :with => :render_404
-    rescue_from ::AbstractController::ActionNotFound, :with => :render_404
-    rescue_from CanCan::AccessDenied, :with => :render_403
+  rescue_from Exception, :with => :render_500
+  rescue_from ActiveRecord::RecordNotFound, :with => :render_404
+  rescue_from ActionController::RoutingError, :with => :render_404
+  rescue_from ActionController::UnknownController, :with => :render_404
+  rescue_from ::AbstractController::ActionNotFound, :with => :render_404
+  rescue_from CanCan::AccessDenied, :with => :render_403
+
+  # Code that to DRY out permitted param filtering
+  # The controller declares allow_params_for :model_name and defines allowed_params
+  def self.allow_params_for instance_name
+    instance_name ||= controller_name.singularize.to_sym
+
+    define_method("#{instance_name}_params") do
+      unless params[instance_name].blank?
+        params[instance_name].permit(*allowed_params)
+      else
+        {}
+      end
+    end
   end
 
   # Splits a comma separated list of emails into a list of emails without trailing spaces
@@ -138,20 +150,22 @@ class ApplicationController < ActionController::Base
   end
 
   # This method is called from BigbluebuttonRails.
-  # Returns a hash with options to override the options saved in the database when creating
-  # a meeting in the room 'room'.
+  # Returns a hash with options to override the options used when making the API call to
+  # create a meeting in the room 'room'. The parameters returned are used directly in the
+  # API, so the keys should match the attributes used in the API and not the columns saved
+  # in the database (e.g. :attendeePW instead of :attendee_key)!
   def bigbluebutton_create_options(room)
     ability = Abilities.ability_for(current_user)
 
     can_record = ability.can?(:record_meeting, room)
     if Site.current.webconf_auto_record
       # show the record button if the user has permissions to record
-      { :record_meeting => can_record }
+      { record: can_record }
     else
       # only enable recording if the room is set to record and if the user has permissions to
       # used to forcibly disable recording if a user has no permission but the room is set to record
       record = room.record_meeting && can_record
-      { :record_meeting => record }
+      { record: record }
     end
   end
 
@@ -182,32 +196,43 @@ class ApplicationController < ActionController::Base
   end
 
   def render_404(exception)
-    # FIXME: this is never triggered, see the bottom of routes.rb
-    @exception = exception
-    render_error 404
+    unless Rails.application.config.consider_all_requests_local
+      # FIXME: this is never triggered, see the bottom of routes.rb
+      @exception = exception
+      render_error 404
+    else
+      raise exception
+    end
   end
 
   def render_500(exception)
-    @exception = exception
-    pp exception
-    render_error 500
+    unless Rails.application.config.consider_all_requests_local
+      @exception = exception
+      ExceptionNotifier.notify_exception exception
+      render_error 500
+    else
+      raise exception
+    end
   end
 
   def render_403(exception)
-    @exception = exception
-    render_error 403
+    unless Rails.application.config.consider_all_requests_local
+      @exception = exception
+      render_error 403
+    else
+      raise exception
+    end
   end
 
   # Store last url for post-login redirect to whatever the user last visited.
   # From: https://github.com/plataformatec/devise/wiki/How-To:-Redirect-back-to-current-page-after-sign-in,-sign-out,-sign-up,-update
   def store_location
     ignored_paths = [ "/login", "/users/login", "/users",
-                      "/register", "/users/register",
-                      "/logout",
-                      "/users/password",
-                      "/users/confirmation/new",
-                      "/secure", "/secure/info",
-                      "/secure/associate" ]
+                      "/register", "/users/signup",
+                      "/users/password", "/users/password/new",
+                      "/users/confirmation/new", "/users/confirmation",
+                      "/secure", "/secure/info", "/secure/associate",
+                      "/pending" ]
     if (!ignored_paths.include?(request.path) &&
         !request.xhr? && # don't store ajax calls
         (request.format == "text/html" || request.content_type == "text/html"))

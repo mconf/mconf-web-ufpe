@@ -26,6 +26,7 @@ pt-br:
         events_enabled: "Habilita ou desabilita o módulo de eventos no site. Para habilitá-lo, você deve possuir o módulo de eventos instalado. Reinicie a aplicação para aplicar as mudanças."
         exception_notifications: "Enviar e-mails de depuração sempre que ocorrer um erro grave na aplicação"
         exception_notifications_email: "Use espaços, vírgulas ou ponto-e-vírgulas para separar diferentes e-mails."
+        exception_notifications_prefix: "Será colocado antes do assunto do e-mail. Padrão: '[ERROR]'."
         external_help: "Insira a url para o site externo que contem a página de Ajuda/FAQ. Deve conter \"http://\"."
         feedback_url: "Os usuários serão redirecionados para esta URL quando eles sairem de uma conferência. Se o campo ficar em branco, eles serão redirecionados para \"%{default_url}\"."
         ldap_filter: "Um filtro LDAP para restringir os usuários que podem logar usando o LDAP. Exemplo: \"(&(objectclass=user)(objectcategory=person))\"."
@@ -60,7 +61,7 @@ pt-br:
           moderator_key: "Chave para que os usuários acessem uma reunião com papel de moderador. Não reutilize senhas reais aqui. Esta senha só será necessária se a comunidade for privada."
           presenter_share_only: "Habilite para que somente o apresentador possa compartilhar sua câmera e microfone. Utilizado em conferências \"um para muitos\"."
           welcome_msg: "Essa mensagem é exibida no bate-papo quando um usuário entrar na conferência. Deixe em branco para usar a mensagem padrão. Você pode incluir informações específicas à conferência usando as variáveis %%CONFNAME%%, %%DIALNUM%% e %%CONFNUM%%"
-        permalink: "Este atributo é utilizado para identificar a sua comunidade em endereços web, incluindo o endereço da sala de webconferência desta comunidade"
+        permalink: "Este atributo é utilizado para identificar a sua comunidade em endereços web, incluindo o endereço da sala de webconferência desta comunidade. Use apenas letras minúsculas, números ou hifens."
         public: "Comunidades colaborativas podem ser públicas, para que qualquer pessoa possa ver o que acontece nelas, ou privadas, onde apenas os membros têm acesso às atividades da comunidade"
         repository: "O repositório de documentos é um espaço onde os usuários deste espaço podem compartilhar documentos de qualquer tipo"
       user:

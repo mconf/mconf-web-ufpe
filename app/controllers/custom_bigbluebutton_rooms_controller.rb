@@ -10,29 +10,22 @@ class CustomBigbluebuttonRoomsController < Bigbluebutton::RoomsController
   before_filter :authenticate_user!,
     :except => [:invite, :invite_userid, :join, :join_mobile, :running]
 
-  # do it in 3 steps because we need more info about the room when joining/ending to decide
-  # if the user has permissions and which role he should have in the meeting
-  load_resource :find_by => :param, :class => "BigbluebuttonRoom", :instance_name => "room",
-    :except => :create
-  before_filter :fetch_room_info, :only => [:join, :end]
-  authorize_resource :class => "BigbluebuttonRoom", :instance_name => "room",
-    :except => :create
+  # For :join and :end we need information from the web conference server, so we have to fetch it.
+  # This has to run before any kind of authorization because some methods need this extra
+  # information, see `ApplicationController.bigbluebutton_role`.
+  load_resource :find_by => :param, :class => "BigbluebuttonRoom",
+    :instance_name => "room", :except => [:join, :end]
+  prepend_before_action :load_and_fetch_room_info, :only => [:join, :end]
 
-  # TODO: cancan is not ready yet for strong_parameters, so if we call 'load_resource' on :create it
-  # will try to create the resource and will fail with ActiveModel::ForbiddenAttributes
-  # This should be solved in the future, so the block below (and the :except in the
-  # 'load_and_authorize_resource' call above) can be removed.
-  # See more at: https://github.com/ryanb/cancan/issues/835
-  before_filter :load_room_for_create, :only => :create
-  authorize_resource :class => "BigbluebuttonRoom", :instance_name => "room",
-    :only => :create
-  def load_room_for_create
-    @room = BigbluebuttonRoom.new(room_params)
-  end
+  # Authorizing is the same for all actions
+  authorize_resource :class => "BigbluebuttonRoom", :instance_name => "room"
 
   # the logic of the 2-step joining process
   before_filter :check_redirect_to_invite, :only => [:invite_userid]
   before_filter :check_redirect_to_invite_userid, :only => [:invite]
+
+  # don't let users join if the room's limit was exceeded
+  before_filter :check_user_limit, :only => [:join]
 
   layout :determine_layout
 
@@ -98,8 +91,11 @@ class CustomBigbluebuttonRoomsController < Bigbluebutton::RoomsController
   def send_invitation
 
     # adjusts the dates set by the user in the datetimepicker to dates we can set in the invitation
-    unless adjust_dates_for_invitation(params)
+    if !adjust_dates_for_invitation(params)
       flash[:error] = t('custom_bigbluebutton_rooms.send_invitation.error_date_format')
+
+    elsif params[:invite][:title].blank?
+      flash[:error] = t('custom_bigbluebutton_rooms.send_invitation.error_title')
 
     else
       invitation_params = {
@@ -107,7 +103,7 @@ class CustomBigbluebuttonRoomsController < Bigbluebutton::RoomsController
         :target => @room,
         :starts_on => params[:invite][:starts_on],
         :ends_on => params[:invite][:ends_on],
-        :title => params[:invite][:title] || t('web_conference_mailer.invitation_email.event_name', :name => current_user.full_name),
+        :title => params[:invite][:title],
         :url => join_webconf_url(@room),
         :description => params[:invite][:message],
         :ready => true
@@ -141,8 +137,9 @@ class CustomBigbluebuttonRoomsController < Bigbluebutton::RoomsController
 
   protected
 
-  # Fetches information of the target room from the web conference server.
-  def fetch_room_info
+  # Loads the room and fetches information from the web conference server.
+  def load_and_fetch_room_info
+    @room = BigbluebuttonRoom.find_by_param(params[:id])
     @room.fetch_is_running?
     @room.fetch_meeting_info if @room.is_running?
   end
@@ -153,21 +150,39 @@ class CustomBigbluebuttonRoomsController < Bigbluebutton::RoomsController
   def adjust_dates_for_invitation(params)
     date_format = t('_other.datetimepicker.format_rails')
     user_time_zone = Mconf::Timezone.user_time_zone_offset(current_user)
-    if params[:invite][:starts_on].present?
-      time = "#{params[:invite]['starts_on_time(4i)']}:#{params[:invite]['starts_on_time(5i)']}"
-      params[:invite][:starts_on] = "#{params[:invite][:starts_on]} #{time} #{user_time_zone}"
-      params[:invite][:starts_on] = Time.strptime(params[:invite][:starts_on], date_format)
+    [:starts_on, :ends_on].each do |field|
+      if params[:invite][field].present?
+        time = "#{params[:invite][field.to_s + '_time(4i)']}:#{params[:invite][field.to_s + '_time(5i)']}"
+        params[:invite][field] = "#{params[:invite][field]} #{time} #{user_time_zone}"
+        params[:invite][field] = Time.strptime(params[:invite][field], date_format)
+      end
+      (1..5).each { |n| params[:invite].delete("#{field}_time(#{n}i)") }
     end
-    if params[:invite][:ends_on].present?
-      time = "#{params[:invite]['ends_on_time(4i)']}:#{params[:invite]['ends_on_time(5i)']}"
-      params[:invite][:ends_on] = "#{params[:invite][:ends_on]} #{time} #{user_time_zone}"
-      params[:invite][:ends_on] = Time.strptime(params[:invite][:ends_on], date_format)
-    end
-    (1..5).each { |n| params[:invite].delete("starts_on_time(#{n}i)") }
-    (1..5).each { |n| params[:invite].delete("ends_on_time(#{n}i)") }
     true
   rescue
     false
+  end
+
+  # Redirects the user elsewhere if the room exceeds the user limit defined in the room.
+  # This check won't be made when the room is being created.
+  # Note: Solves the problem but it's not perfect. Has concurrency problems if users try to join
+  # simultaneously, before the webconf server has updated the number of participants to return
+  # in the API. Ideally BBB should enforce max_participants is respected.
+  def check_user_limit
+    user_limit = @room.max_participants
+
+    if user_limit.present? && @room.is_running?
+      meeting = @room.fetch_meeting_info
+      if meeting[:participantCount] >= user_limit
+        flash[:error] = t('custom_bigbluebutton_rooms.join.user_limit_exceeded')
+        redirect_to request.referer
+      end
+    end
+  end
+
+  # For cancan create load_and_authorize
+  def create_params
+    room_params
   end
 
   # Override the method used in Bigbluebutton::RoomsController to get the parameters the user is

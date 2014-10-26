@@ -232,11 +232,10 @@ class SpacesController < ApplicationController
     @webconf_attendees = []
     unless @webconf_room.attendees.nil?
       @webconf_room.attendees.each do |attendee|
-        profile = Profile.where(:full_name => attendee.full_name).first
-        unless profile.nil?
-          @webconf_attendees << profile.user
-        end
+        user = User.where(id: attendee.user_id).first
+        @webconf_attendees << user unless user.nil?
       end
+      @webconf_attendees.uniq!
     end
     render :layout => 'spaces_show'
   end
@@ -344,15 +343,8 @@ class SpacesController < ApplicationController
     end
   end
 
-  def space_params
-    unless params[:space].blank?
-      params[:space].permit(*space_allowed_params)
-    else
-      {}
-    end
-  end
-
-  def space_allowed_params
+  allow_params_for :space
+  def allowed_params
     [ :name, :description, :logo_image, :public, :permalink, :disabled, :repository,
       :crop_x, :crop_y, :crop_w, :crop_h,
       :bigbluebutton_room_attributes =>

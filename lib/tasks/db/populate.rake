@@ -4,17 +4,17 @@ namespace :db do
 
   desc "Populate the DB with random test data. Options: SINCE, CLEAR"
   task :populate => :environment do
-    reserved_usernames = ['lfzawacki', 'daronco', 'fbottin', 'gmiotto']
+    # can't require at the top because will raise errors when running rake in
+    # production (cannot load such file -- populator)
+    require 'populator'
 
-    if ENV['SINCE']
-      @created_at_start = DateTime.parse(ENV['SINCE']).to_time
-    else
-      @created_at_start = 6.months.ago
-    end
+    reserved_usernames = ['lfzawacki', 'daronco', 'fbottin']
+
+    @created_at_start = 1.year.ago
+    @created_at_start_months = 12
+
     puts
     puts "*** Start date set to: #{@created_at_start}"
-
-    require 'populator'
 
     username_offset = 0 # to prevent duplicated usernames
 
@@ -28,9 +28,10 @@ namespace :db do
         MwebEvents::Participant.destroy_all
       end
       RecentActivity.destroy_all
-      BigbluebuttonRecording.destroy_all
       User.with_disabled.where.not(id: User.first.id).destroy_all
       BigbluebuttonRoom.where.not(owner: User.first).destroy_all
+      BigbluebuttonPlaybackType.destroy_all
+      BigbluebuttonRecording.destroy_all
     end
 
     puts
@@ -255,6 +256,18 @@ namespace :db do
     end
 
     puts "* Create recordings and metadata for all webconference rooms (#{BigbluebuttonRoom.count} rooms)"
+
+    # Playback types
+    ids = ["presentation", "presentation_video", "presentation_export"]
+    ids.each_with_index do |id, i|
+      params = {
+        identifier: id,
+        visible: i==0 ? true : [true, false],
+        default: i==0
+      }
+      BigbluebuttonPlaybackType.create(params)
+    end
+
     BigbluebuttonRoom.all.each do |room|
 
       BigbluebuttonRecording.populate 2..10 do |recording|
@@ -265,7 +278,7 @@ namespace :db do
         recording.name = Populator.words(3..5).titleize
         recording.published = true
         recording.available = true
-        recording.start_time = 5.months.ago..Time.now
+        recording.start_time = @created_at_start..Time.now
         recording.end_time = recording.start_time + rand(5).hours
         recording.description = Populator.words(5..8)
 
@@ -278,12 +291,17 @@ namespace :db do
         end
 
         # Recording playback formats
-        # Note: make a few without playback formats, meaning that the recording is still being processed
+        # Note: make a few recordings without playback formats, meaning that the recording is still
+        # being processed
+        playback_types = BigbluebuttonPlaybackType.pluck(:id)
         BigbluebuttonPlaybackFormat.populate 0..3 do |format|
           format.recording_id = recording.id
-          format.format_type = "#{Populator.words(1)}-#{format.id}"
-          format.url = "http://" + Forgery::Internet.domain_name + "/playback/" + format.format_type
+          format.url = "http://#{Forgery::Internet.domain_name}/playback/#{Populator.words(1)}"
           format.length = Populator.value_in_range(32..128)
+
+          id = playback_types[rand(playback_types.length)]
+          playback_types.delete(id)
+          format.playback_type_id = id
         end
       end
 
@@ -294,12 +312,16 @@ namespace :db do
         if user_id.nil?
           if recording.room.owner_type == 'User'
             user = recording.room.owner
-            recording.metadata.create(:name => BigbluebuttonRails.metadata_user_id.to_s,
-                                      :content => user.id)
+            if user
+              recording.metadata.create(:name => BigbluebuttonRails.metadata_user_id.to_s,
+                                        :content => user.id)
+            end
           else
             space = recording.room.owner
-            recording.metadata.create(:name => BigbluebuttonRails.metadata_user_id.to_s,
-                                      :content => space.users[rand(space.users.length)])
+            if space
+              recording.metadata.create(:name => BigbluebuttonRails.metadata_user_id.to_s,
+                                        :content => space.users[rand(space.users.length)])
+            end
           end
         end
       end
@@ -331,7 +353,9 @@ namespace :db do
       end
 
       # Space created recent activity
-      space.new_activity :create, space.admins.first
+      if space.admins.length > 0
+        space.new_activity :create, space.admins.first
+      end
 
       # Author and recent_activity for posts
       ( space.posts ).each do |item|
@@ -361,6 +385,14 @@ namespace :db do
         att.new_activity :create, space.users[rand(space.users.length)]
       end
 
+    end
+
+    # Randomize when recent activities were created
+    puts "* Randomizing dates for recent activities"
+    RecentActivity.all.each do |item|
+      item.created_at = rand(@created_at_start_months).months.ago
+      item.updated_at = item.created_at
+      item.save!
     end
 
     # done after all the rest to simulate what really happens: users are created enabled

@@ -9,6 +9,8 @@ require 'devise/encryptors/station_encryptor'
 require 'digest/sha1'
 class User < ActiveRecord::Base
 
+  # TODO: block :username from being modified after registration
+
   ## Devise setup
   # Other available devise modules are:
   # :token_authenticatable, :lockable, :timeoutable and :omniauthable
@@ -29,20 +31,12 @@ class User < ActiveRecord::Base
     end
   end
 
-  # attr_accessible :email, :password, :password_confirmation, :remember_me, :login, :username, :approved
-  # TODO: block :username from being modified after registration
-  # attr_accessible :username, :as => :create
-
-  # TODO: improve the format matcher, check specs for some values that are allowed today
-  #   but are not really recommended (e.g. '-')
-  validates :username, :uniqueness => { :case_sensitive => false },
-                       :presence => true,
-                       :format => /\A[A-Za-z0-9\-_]*\z/,
-                       :length => { :minimum => 1 }
-
-  # The username has to be unique not only for user, but across other
-  # models as well
-  validate :username_uniqueness
+  validates :username,
+    presence: true,
+    format: /\A[A-Za-z0-9\-_]*\z/,
+    length: { minimum: 1 },
+    identifier_uniqueness: true,
+    room_param_uniqueness: true
 
   extend FriendlyId
   friendly_id :username
@@ -68,6 +62,10 @@ class User < ActiveRecord::Base
     in_room = t[:owner_id].in(user_room.id).and(t[:owner_type].eq('BigbluebuttonRoom'))
     in_space_rooms = t[:owner_id].in(space_rooms).and(t[:owner_type].eq('BigbluebuttonRoom'))
     RecentActivity.where(in_spaces.or(in_room).or(in_space_rooms))
+  end
+
+  def site_needs_approval?
+    Site.current.require_registration_approval
   end
 
   apply_simple_captcha
@@ -115,7 +113,25 @@ class User < ActiveRecord::Base
   after_create :create_webconf_room
   after_update :update_webconf_room
 
-  before_create :automatically_approve_if_needed
+  after_create :send_admin_approval_mail, if: :site_needs_approval?
+  def send_admin_approval_mail
+    if !approved?
+      admins = User.where(:superuser => true)
+
+      admins.each do |admin|
+        AdminMailer.new_user_waiting_for_approval(admin.id, self.id).deliver
+      end
+    end
+  end
+
+  after_update :send_user_approved_mail, if: :site_needs_approval?
+  def send_user_approved_mail
+    if approved_changed? && approved?
+      AdminMailer.new_user_approved(self.id).deliver
+    end
+  end
+
+  before_create :automatically_approve, unless: :site_needs_approval?
 
   default_scope { where(:disabled => false) }
 
@@ -152,9 +168,7 @@ class User < ActiveRecord::Base
 
   def update_webconf_room
     if self.username_changed?
-      params = {
-        :param => self.username
-      }
+      params = { param: self.username }
       bigbluebutton_room.update_attributes(params)
     end
   end
@@ -166,15 +180,7 @@ class User < ActiveRecord::Base
 
   # Full location: city + country
   def location
-    if !self.city.blank? && !self.country.blank?
-      [ self.city, self.country ].join(', ')
-    elsif !self.city.blank?
-      self.city
-    elsif !self.country.blank?
-      self.country
-    else
-      ""
-    end
+    [ self.city.presence, self.country.presence ].compact.join(', ')
   end
 
   after_create do |user|
@@ -282,8 +288,8 @@ class User < ActiveRecord::Base
 
   # Automatically approves the user if the current site is not requiring approval
   # on registration.
-  def automatically_approve_if_needed
-    self.approved = true unless Site.current.require_registration_approval?
+  def automatically_approve
+    self.approved = true
   end
 
   # Sets the user as approved
@@ -334,14 +340,6 @@ class User < ActiveRecord::Base
     # note: not 'find' because some of the spaces might be disabled and 'find' would raise
     #   an exception
     Space.where(:id => ids)
-  end
-
-  private
-
-  def username_uniqueness
-    unless Space.with_disabled.find_by_permalink(self.username).blank?
-      errors.add(:username, "has already been taken")
-    end
   end
 
 end
