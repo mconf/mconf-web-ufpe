@@ -29,7 +29,7 @@ feature 'Visitor logs in' do
   end
 
   feature 'with valid credentials' do
-    scenario 'from the frontpage' do
+    skip 'from the frontpage' do # not for UFPE
       visit root_path
       fill_in 'user[login]', with: @user.username
       find('#login-box').find('#user_password').set(@user.password)

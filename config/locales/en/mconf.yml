@@ -483,7 +483,7 @@ en:
       status_unknown: "unknown"
       steps: "steps:"
     invite_userid:
-      login: "Login"
+      login: "Sign in"
       member:
         email_or_username: "Email or username"
         password: "Password"
