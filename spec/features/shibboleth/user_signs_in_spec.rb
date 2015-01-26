@@ -1,4 +1,7 @@
 require 'spec_helper'
+require 'support/feature_helpers'
+
+include ActionView::Helpers::SanitizeHelper
 
 describe 'User signs in via shibboleth' do
   subject { page }
@@ -19,6 +22,9 @@ describe 'User signs in via shibboleth' do
     it { current_path.should eq(my_home_path) }
     it { should have_content @attrs[:_full_name] }
     it { should have_content @attrs[:email] }
+    it { has_success_message strip_links(t('shibboleth.create_association.account_created', :url => new_user_password_path))}
+    it { should_not have_content t('my.home.not_confirmed') }
+    it { UserMailer.should have_queue_size_of(1) }
   end
 
   context "for the first time when the flag `shib_always_new_account` is not set" do
@@ -35,6 +41,14 @@ describe 'User signs in via shibboleth' do
 
     it { should have_content t('shibboleth.associate.new_account.title') }
     it { should have_button t('shibboleth.associate.new_account.create_new_account') }
+  end
+
+  context 'for the first time' do
+    before {
+      enable_shib
+      setup_shib @attrs[:_full_name], @attrs[:email], @attrs[:email]
+      visit shibboleth_path
+    }
 
     context 'and the user wants a new account' do
       before { click_button t('shibboleth.associate.new_account.create_new_account') }
@@ -56,6 +70,9 @@ describe 'User signs in via shibboleth' do
         it { current_path.should eq(my_home_path) }
         it { should have_content user._full_name }
         it { should have_content user.email }
+        it { has_success_message t('shibboleth.create_association.account_associated', :email => user.email)}
+        it { should_not have_content t('my.home.not_confirmed') }
+        it { UserMailer.should have_queue_size_of(0) }
       end
 
       context "the user enters the wrong credentials in the association page" do
@@ -63,6 +80,22 @@ describe 'User signs in via shibboleth' do
 
         it { has_failure_message }
         it { current_path.should eq(shibboleth_path) }
+      end
+
+      context "the user's account is not confirmed and gets confirmed" do
+        let(:user) { FactoryGirl.create(:user) }
+        before {
+          user.update_attributes :confirmed_at => nil
+          fill_in 'user[login]', :with => user.username
+          fill_in 'user[password]', :with => user.password
+          click_button t('shibboleth.associate.existent_account.link_to_this_account')
+        }
+
+        it { has_success_message }
+        it { current_path.should eq(my_home_path) }
+        it { has_success_message t('shibboleth.create_association.account_associated', :email => user.email)}
+        it { should_not have_content t('my.home.not_confirmed') }
+        it { UserMailer.should have_queue_size_of(0) }
       end
 
       context "the user's account is disabled" do
@@ -76,6 +109,77 @@ describe 'User signs in via shibboleth' do
 
         it { has_failure_message }
         it { current_path.should eq(shibboleth_path) }
+      end
+    end
+
+    context "creating the user's account" do
+      context "successfully" do
+        before {
+          expect {
+            click_button t('shibboleth.associate.new_account.create_new_account')
+          }.to change{ User.count }
+        }
+
+        it { current_path.should eq(my_home_path) }
+        it("creates a ShibToken") { ShibToken.count.should be(1) }
+        it("sends notification emails") { UserMailer.should have_queue_size_of(1) }
+        it("sends notification emails") { UserMailer.should have_queued(:registration_notification_email, User.last.id) }
+      end
+
+      context "and there's a conflict on the user's username with another user" do
+        before {
+          FactoryGirl.create(:user, username: @attrs[:_full_name].parameterize)
+          expect {
+            click_button t('shibboleth.associate.new_account.create_new_account')
+          }.not_to change{ User.count }
+        }
+
+        it { current_path.should eq(shibboleth_path) }
+        it { has_failure_message "Username has already been taken" }
+        it("doesn't create a ShibToken") { ShibToken.count.should be(0) }
+        it("doesn't send emails") { UserMailer.should have_queue_size_of(0) }
+      end
+
+      context "and there's a conflict on the user's username with a space" do
+        before {
+          FactoryGirl.create(:space, permalink: @attrs[:_full_name].parameterize)
+          expect {
+            click_button t('shibboleth.associate.new_account.create_new_account')
+          }.not_to change{ User.count }
+        }
+
+        it { current_path.should eq(shibboleth_path) }
+        it { has_failure_message "Username has already been taken" }
+        it("doesn't create a ShibToken") { ShibToken.count.should be(0) }
+        it("doesn't send emails") { UserMailer.should have_queue_size_of(0) }
+      end
+
+      context "and there's a conflict on the user's username with a room" do
+        before {
+          FactoryGirl.create(:bigbluebutton_room, param: @attrs[:_full_name].parameterize)
+          expect {
+            click_button t('shibboleth.associate.new_account.create_new_account')
+          }.not_to change{ User.count }
+        }
+
+        it { current_path.should eq(shibboleth_path) }
+        it { has_failure_message "Username has already been taken" }
+        it("doesn't create a ShibToken") { ShibToken.count.should be(0) }
+        it("doesn't send emails") { UserMailer.should have_queue_size_of(0) }
+      end
+
+      context "and there's a conflict in the user's email" do
+        before {
+          FactoryGirl.create(:user, email: @attrs[:email])
+          expect {
+            click_button t('shibboleth.associate.new_account.create_new_account')
+          }.not_to change{ User.count }
+        }
+
+        it { current_path.should eq(shibboleth_path) }
+        it { has_failure_message t('shibboleth.create_association.existent_account', email: @attrs[:email]) }
+        it("doesn't create a ShibToken") { ShibToken.count.should be(0) }
+        it("doesn't send emails") { UserMailer.should have_queue_size_of(0) }
       end
     end
   end

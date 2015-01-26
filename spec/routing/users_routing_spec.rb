@@ -10,7 +10,6 @@ describe UsersController do
   include Shoulda::Matchers::ActionController
 
   describe "routing" do
-    it { should route(:get, "/users").to(:action => :index) }
     it { should route(:get, "/users/fellows").to(:action => :fellows) }
     it { should route(:get, "/users/current").to(:action => :current) }
     it { should route(:get, "/users/select").to(:action => :select) }
@@ -19,9 +18,11 @@ describe UsersController do
     it { should route(:put, "/users/u1").to(:action => :update, :id => "u1") }
     it { should route(:delete, "/users/u1").to(:action => :destroy, :id => "u1") }
     it { should route(:post, "/users/u1/enable").to(:action => :enable, :id => "u1") }
-    it { should_not route(:get, "/users/new").to(:action => :new) }
-    it { should_not route(:post, "/users").to(:action => :create) }
+    it { should route(:get, "/users/new").to(:action => :new) }
+    it { should route(:post, "/users").to(:action => :create) }
     it { should route(:post, "/users/u1/approve").to(:action => :approve, :id => "u1") }
     it { should route(:post, "/users/u1/disapprove").to(:action => :disapprove, :id => "u1") }
+
+    it { { get: "/users" }.should_not be_routable }
   end
 end

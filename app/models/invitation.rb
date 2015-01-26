@@ -25,30 +25,22 @@ class Invitation < ActiveRecord::Base
              end
     return false if mailer.nil?
 
-    # note: for emails, for now, we always assume it succeeded
-    result = true
-
-    if self.recipient.nil?
-      mailer.invitation_email(self.id).deliver
-    else
-      if self.recipient.notify_via_email?
-        mailer.invitation_email(self.id).deliver
-      end
-      if self.recipient.notify_via_private_message?
-        result = send_private_message
-      end
-    end
-
-    result
+    mailer.invitation_email(self.id).deliver
+    true
   end
 
-  # Receives a string with user_ids and emails and returns and array of them
-  def self.split_invitation_senders(email_string)
-    users = email_string.split(",")
-    users.map { |user_str|
-      user = User.find_by_id(user_str)
-      user ? user : user_str
-    }
+  def self.create_invitations(user_list, params)
+    # creates an invitation for each user
+    users = user_list.try(:split, ",") || []
+    users.map do |user_str|
+      user = User.where(:id => user_str).first
+      if user
+        params[:recipient] = user
+      else
+        params[:recipient_email] = user_str
+      end
+      self.create(params)
+    end
   end
 
   # Builds a flash message containing all the names of invited users
@@ -92,7 +84,9 @@ class Invitation < ActiveRecord::Base
 
   def to_ical
     if self.is_a? EventInvitation
-      target.to_ics.to_ical
+      cal = Icalendar::Calendar.new
+      cal.add_event(target.to_ics)
+      cal.to_ical
     else
       event = Icalendar::Event.new
 

@@ -28,10 +28,10 @@ class ApplicationController < ActionController::Base
   # Handle errors - error pages
   rescue_from Exception, :with => :render_500
   rescue_from ActiveRecord::RecordNotFound, :with => :render_404
-  rescue_from ActionController::RoutingError, :with => :render_404
   rescue_from ActionController::UnknownController, :with => :render_404
+  rescue_from ActionController::RoutingError, :with => :render_404
   rescue_from ::AbstractController::ActionNotFound, :with => :render_404
-  rescue_from CanCan::AccessDenied, :with => :render_403
+  rescue_from CanCan::AccessDenied, with: :handle_access_denied
 
   # Code that to DRY out permitted param filtering
   # The controller declares allow_params_for :model_name and defines allowed_params
@@ -158,7 +158,7 @@ class ApplicationController < ActionController::Base
     ability = Abilities.ability_for(current_user)
 
     can_record = ability.can?(:record_meeting, room)
-    if Site.current.webconf_auto_record
+    if current_site.webconf_auto_record
       # show the record button if the user has permissions to record
       { record: can_record }
     else
@@ -191,15 +191,15 @@ class ApplicationController < ActionController::Base
     Time.zone = Mconf::Timezone.user_time_zone(current_user)
   end
 
-  def render_error number
+  def render_error_page number
     render :template => "/errors/error_#{number}", :status => number, :layout => "error"
   end
 
   def render_404(exception)
+    @route ||= request.path
     unless Rails.application.config.consider_all_requests_local
-      # FIXME: this is never triggered, see the bottom of routes.rb
       @exception = exception
-      render_error 404
+      render_error_page 404
     else
       raise exception
     end
@@ -209,7 +209,7 @@ class ApplicationController < ActionController::Base
     unless Rails.application.config.consider_all_requests_local
       @exception = exception
       ExceptionNotifier.notify_exception exception
-      render_error 500
+      render_error_page 500
     else
       raise exception
     end
@@ -218,7 +218,7 @@ class ApplicationController < ActionController::Base
   def render_403(exception)
     unless Rails.application.config.consider_all_requests_local
       @exception = exception
-      render_error 403
+      render_error_page 403
     else
       raise exception
     end
@@ -228,7 +228,8 @@ class ApplicationController < ActionController::Base
   # From: https://github.com/plataformatec/devise/wiki/How-To:-Redirect-back-to-current-page-after-sign-in,-sign-out,-sign-up,-update
   def store_location
     ignored_paths = [ "/login", "/users/login", "/users",
-                      "/register", "/users/signup",
+                      "/register", "/users/registration",
+                      "/users/registration/signup", "/users/registration/cancel",
                       "/users/password", "/users/password/new",
                       "/users/confirmation/new", "/users/confirmation",
                       "/secure", "/secure/info", "/secure/associate",
@@ -246,4 +247,19 @@ class ApplicationController < ActionController::Base
     session[:user_return_to] = nil
   end
 
+  # A default handler for access denied exceptions. Will simply redirect the user
+  # to the sign in page if the user is not logged in yet.
+  def handle_access_denied exception
+    respond_to do |format|
+      format.html {
+        if user_signed_in?
+          render_403 exception
+        else
+          redirect_to login_path
+        end
+      }
+      format.json { render json: { error: true, message: "You need to sign in or sign up before continuing." }, status: :unauthorized }
+      format.js   { render json: { error: true, message: "You need to sign in or sign up before continuing." }, status: :unauthorized }
+    end
+  end
 end

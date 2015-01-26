@@ -26,17 +26,11 @@ class SpacesController < ApplicationController
   respond_to :json, :only => [:update_logo]
   respond_to :html, :only => [:new, :edit, :index, :show]
 
-  rescue_from CanCan::AccessDenied, :with => :handle_access_denied
   rescue_from ActiveRecord::RecordNotFound, :with => :handle_record_not_found
 
   # Create recent activity
   after_filter :only => [:create, :update, :leave] do
     @space.new_activity params[:action], current_user unless @space.errors.any? || @space.is_cropping?
-  end
-
-  # Recent activity for join requests
-  after_filter :only => [:join_request_update] do
-    @space.new_activity :join, current_user unless @join_request.errors.any? || !@join_request.accepted?
   end
 
   def index
@@ -59,10 +53,7 @@ class SpacesController < ApplicationController
 
     respond_with @spaces do |format|
       format.html { render :index }
-      format.js {
-        json = @spaces.to_json(space_to_json_hash)
-        render :json => json, :callback => params[:callback]
-      }
+      format.json
     end
   end
 
@@ -82,10 +73,7 @@ class SpacesController < ApplicationController
 
     respond_to do |format|
       format.html { render :layout => 'spaces_show' }
-      format.js {
-        json = @space.to_json(space_to_json_hash)
-        render :json => json, :callback => params[:callback]
-      }
+      format.json
     end
   end
 
@@ -287,10 +275,6 @@ class SpacesController < ApplicationController
 
   private
 
-  def space_to_json_hash
-    { :methods => :user_count, :include => {:logo => { :only => [:height, :width], :methods => :logo_image_path } } }
-  end
-
   def load_and_authorize_with_disabled
     @space = Space.with_disabled.find_by_permalink(params[:id])
     authorize! action_name.to_sym, @space
@@ -308,13 +292,18 @@ class SpacesController < ApplicationController
 
   def handle_record_not_found exception
     @error_message = t("spaces.error.not_found", :permalink => params[:id], :path => spaces_path)
-    render_error 404
+    render_404 exception
   end
 
-  # User trying to access a space not owned or joined by him
+  # Custom handler for access denied errors, overrides method on ApplicationController.
   def handle_access_denied exception
+
+    # anonymous users are required to sign in
+    if !user_signed_in?
+      redirect_to login_path
+
     # if it's a logged user that tried to access a private space
-    if user_signed_in? and [:show, :edit].include?(exception.action)
+    elsif [:show, :edit].include?(exception.action)
 
       if @space.pending_join_request_for?(current_user)
         # redirect him to the page to ask permission to join, but with a warning that
@@ -333,20 +322,20 @@ class SpacesController < ApplicationController
         redirect_to new_space_join_request_path :space_id => params[:id]
       end
 
+    # destructive actions are redirected to the 403 error
     else
-      # anonymous users or destructive actions are redirected to the 403 error
       flash[:error] = t("space.access_forbidden")
       if exception.action == :show
         @error_message = t("space.is_private_html", name: @space.name, path: new_space_join_request_path(@space))
       end
-      render_error 403
+      render_403 exception
     end
   end
 
   allow_params_for :space
   def allowed_params
     [ :name, :description, :logo_image, :public, :permalink, :disabled, :repository,
-      :crop_x, :crop_y, :crop_w, :crop_h,
+      :crop_x, :crop_y, :crop_w, :crop_h, :crop_img_w, :crop_img_h,
       :bigbluebutton_room_attributes =>
         [ :id, :attendee_key, :moderator_key, :default_layout,
           :welcome_msg, :presenter_share_only, :auto_start_video, :auto_start_audio ] ]
