@@ -2,7 +2,7 @@
 en:
   frontpage:
     show:
-      headline: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent id sem varius, viverra tellus eget, hendrerit erat. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Vivamus efficitur lectus non augue interdum, quis ultricies mauris finibus. Donec at eros tempus, cursus diam at, efficitur eros. Cras eget nulla eget magna bibendum euismod. Aenean quis nibh iaculis, interdum metus in, tristique nibh."
+      headline: "Welcome to the web conference service of UFPE!"
       links:
         help: "FAQ/Help"
       login:

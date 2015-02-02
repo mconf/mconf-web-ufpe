@@ -173,9 +173,10 @@ body.frontpage.show {
     }
 
     .headline {
-      text-align: left;
-      margin: 15px 0;
-      text-align: justify;
+      margin: 45px 0;
+      // text-align: justify;
+      text-align: center;
+      @include font-size($font-big);
     }
 
     .btn {
