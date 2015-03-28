@@ -7,16 +7,18 @@
 
 class Site < ActiveRecord::Base
 
+  serialize :visible_locales, Array
+
   # Returns the current (default) site
   def self.current
     first || create
   end
 
   def signature_in_html
-    if signature
-      return signature.gsub(/\r\n?/,'<br>')
+    if signature.blank?
+      name
     else
-      return ""
+      signature.gsub(/\r\n?/, '<br>')
     end
   end
 

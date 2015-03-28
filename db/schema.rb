@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20141218184717) do
+ActiveRecord::Schema.define(version: 20150318204721) do
 
   create_table "activities", force: true do |t|
     t.integer  "trackable_id"
@@ -97,7 +97,7 @@ ActiveRecord::Schema.define(version: 20141218184717) do
     t.boolean  "available",   default: true
     t.datetime "created_at"
     t.datetime "updated_at"
-    t.string   "description"
+    t.text     "description"
     t.integer  "meeting_id"
   end
 
@@ -143,6 +143,13 @@ ActiveRecord::Schema.define(version: 20141218184717) do
 
   add_index "bigbluebutton_rooms", ["meetingid"], name: "index_bigbluebutton_rooms_on_meetingid", unique: true, using: :btree
   add_index "bigbluebutton_rooms", ["server_id"], name: "index_bigbluebutton_rooms_on_server_id", using: :btree
+
+  create_table "bigbluebutton_server_configs", force: true do |t|
+    t.integer  "server_id"
+    t.text     "available_layouts"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
 
   create_table "bigbluebutton_servers", force: true do |t|
     t.string   "name"
@@ -244,6 +251,15 @@ ActiveRecord::Schema.define(version: 20141218184717) do
     t.datetime "updated_at"
   end
 
+  create_table "participant_confirmations", force: true do |t|
+    t.string   "token"
+    t.integer  "participant_id"
+    t.datetime "confirmed_at"
+    t.datetime "email_sent_at"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
   create_table "permissions", force: true do |t|
     t.integer  "user_id",      null: false
     t.integer  "subject_id",   null: false
@@ -316,15 +332,6 @@ ActiveRecord::Schema.define(version: 20141218184717) do
   add_index "shib_tokens", ["identifier"], name: "index_shib_tokens_on_identifier", unique: true, using: :btree
   add_index "shib_tokens", ["user_id"], name: "index_shib_tokens_on_user_id", unique: true, using: :btree
 
-  create_table "simple_captcha_data", force: true do |t|
-    t.string   "key",        limit: 40
-    t.string   "value",      limit: 6
-    t.datetime "created_at"
-    t.datetime "updated_at"
-  end
-
-  add_index "simple_captcha_data", ["key"], name: "idx_key", using: :btree
-
   create_table "sites", force: true do |t|
     t.string   "name"
     t.text     "description"
@@ -368,13 +375,14 @@ ActiveRecord::Schema.define(version: 20141218184717) do
     t.string   "ldap_username_field"
     t.string   "ldap_email_field"
     t.string   "ldap_name_field"
-    t.boolean  "require_registration_approval",  default: false, null: false
+    t.boolean  "require_registration_approval",  default: false,                  null: false
     t.boolean  "events_enabled",                 default: false
-    t.boolean  "registration_enabled",           default: true,  null: false
+    t.boolean  "registration_enabled",           default: true,                   null: false
     t.string   "shib_principal_name_field"
     t.string   "ldap_filter"
     t.boolean  "shib_always_new_account",        default: false
     t.boolean  "local_auth_enabled",             default: true
+    t.string   "visible_locales",                default: "---\n- en\n- pt-br\n"
   end
 
   create_table "spaces", force: true do |t|
@@ -392,22 +400,22 @@ ActiveRecord::Schema.define(version: 20141218184717) do
 
   create_table "users", force: true do |t|
     t.string   "username"
-    t.string   "email",                                          default: "",    null: false
-    t.string   "encrypted_password",                             default: "",    null: false
-    t.string   "password_salt",                       limit: 40
+    t.string   "email",                             default: "",    null: false
+    t.string   "encrypted_password",                default: "",    null: false
+    t.string   "password_salt",          limit: 40
     t.datetime "created_at"
     t.datetime "updated_at"
-    t.boolean  "superuser",                                      default: false
-    t.boolean  "disabled",                                       default: false
+    t.boolean  "superuser",                         default: false
+    t.boolean  "disabled",                          default: false
     t.datetime "confirmed_at"
     t.string   "timezone"
-    t.boolean  "expanded_post",                                  default: false
+    t.boolean  "expanded_post",                     default: false
     t.string   "locale"
-    t.integer  "receive_digest",                                 default: 0
+    t.integer  "receive_digest",                    default: 0
     t.string   "reset_password_token"
     t.datetime "reset_password_sent_at"
     t.datetime "remember_created_at"
-    t.integer  "sign_in_count",                                  default: 0
+    t.integer  "sign_in_count",                     default: 0
     t.datetime "current_sign_in_at"
     t.datetime "last_sign_in_at"
     t.string   "current_sign_in_ip"
@@ -416,9 +424,7 @@ ActiveRecord::Schema.define(version: 20141218184717) do
     t.datetime "confirmation_sent_at"
     t.string   "unconfirmed_email"
     t.boolean  "can_record"
-    t.boolean  "approved",                                       default: false, null: false
-    t.datetime "needs_approval_notification_sent_at"
-    t.datetime "approved_notification_sent_at"
+    t.boolean  "approved",                          default: false, null: false
   end
 
   add_index "users", ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true, using: :btree

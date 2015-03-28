@@ -4,6 +4,8 @@
 # This file is licensed under the Affero General Public License version
 # 3 or later. See the LICENSE file.
 
-class ChatLog < ActiveRecord::Base
-  belongs_to :event
+FactoryGirl.define do
+  factory :participant, :class => MwebEvents::Participant do |e|
+    e.association :event
+  end
 end
