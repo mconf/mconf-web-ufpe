@@ -4,7 +4,8 @@
     = image_tag "ufpe/logo-lg.png", size: "460x164"
     .headline
       = t(".headline")
-    = link_to t('.register.title'), register_path, class: "btn btn-danger btn-large"
+    - if current_site.registration_enabled?
+      = link_to t('.register.title'), register_path, class: "btn btn-danger btn-large"
 
   - if current_site.local_auth_enabled? || current_site.ldap_enabled?
     #login-box.form-area
