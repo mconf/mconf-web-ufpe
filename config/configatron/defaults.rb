@@ -28,3 +28,5 @@ configatron.configure_from_hash(config)
 # Use to know whether things like routes, helpers, and abilities from the module should be
 # loaded.
 configatron.modules.events.loaded = false
+
+configatron.ufpe.ldap_group = "CN=g_mconf,CN=Builtin,DC=ufpe,DC=br"

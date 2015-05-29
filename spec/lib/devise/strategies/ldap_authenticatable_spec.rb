@@ -44,6 +44,10 @@ describe Devise::Strategies::LdapAuthenticatable do
   end
 
   describe "#authenticate!" do
+    before {
+      # skip UFPE's validation
+      target.stub(:validate_user_group).and_return(true)
+    }
 
     context "if LDAP is enabled and there's user information in the params" do
       let(:params) { { :user => { :login => "user-login", :password => "user-password" } } }

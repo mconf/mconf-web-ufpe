@@ -45,6 +45,9 @@ default:
     salt: "my-secret-salt"
     version: "0.8"
 
+  # ufpe:
+  #   ldap_group: "CN=g_mconf,CN=Builtin,DC=ufpe,DC=br"
+
 # Configurations for each environment
 # You can find below the sections for each environment available.
 # Uncomment the lines from one of them to define specific configurations for that environment.

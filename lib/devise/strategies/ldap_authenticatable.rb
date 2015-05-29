@@ -55,6 +55,13 @@ module Devise
 
             else
               Rails.logger.info "LDAP: user successfully authenticated: #{ldap_user}"
+
+              # For UFPE
+              unless validate_user_group(ldap, ldap_user)
+                Rails.logger.error "LDAP: the user doesn't belong to a group that has access to Mconf, aborting"
+                return fail(:invalid)
+              end
+
               ldap_helper = Mconf::LDAP.new(session)
               invalid_fields = ldap_helper.validate_user(ldap_user.first, configs)
               if invalid_fields
@@ -170,6 +177,61 @@ module Devise
           Rails.logger.error "LDAP: the server did not respond in time, error: #{e}"
           :timeout
         end
+      end
+
+      # Check the groups the user belongs to, to make sure he belongs to the target
+      # group to which our users should belong to have access to the app.
+      def validate_user_group(ldap, ldap_user)
+        configs = ldap_configs
+
+        if configatron.ufpe.ldap_group.nil? || configatron.ufpe.ldap_group.blank?
+          Rails.logger.error "LDAP: no group configured for UFPE, aborting."
+          return false
+        end
+        Rails.logger.info "LDAP: set Mconf's LDAP group as: #{configatron.ufpe.ldap_group.to_s}"
+
+        # Get the groups this user belongs to
+        if ldap_user.first.nil? || ldap_user.first.try(:dn).blank?
+          Rails.logger.error "LDAP: invalid DN for the user, aborting."
+          return false
+        end
+        dn = ldap_user.first.dn
+
+        Rails.logger.info "LDAP: checking groups for the user #{dn.inspect}"
+        filter = "(&(objectClass=group)(member=#{dn}))"
+        groups_user_belongs_to = [dn]
+        ldap.search(base: configs.ldap_user_treebase, filter: filter) do |entry|
+          Rails.logger.debug "LDAP: search for this user's groups got entry: #{entry.inspect}"
+          if entry && entry.dn
+            groups_user_belongs_to << entry.dn
+          end
+        end
+        Rails.logger.info "LDAP: user belongs to the groups: #{groups_user_belongs_to.inspect}"
+
+        # Get the groups that are members of out "g_mconf" group
+        groups_member_of_g_mconf = ldap.search(base: configatron.ufpe.ldap_group)
+        Rails.logger.debug "LDAP: search for members of Mconf's group got: #{groups_member_of_g_mconf.inspect}"
+        if groups_member_of_g_mconf && groups_member_of_g_mconf.first && groups_member_of_g_mconf.first.member
+          groups_member_of_g_mconf = groups_member_of_g_mconf.first.member
+        else
+          groups_member_of_g_mconf = []
+        end
+        Rails.logger.info "LDAP: groups member of Mconf's group: #{groups_member_of_g_mconf.inspect}"
+
+        # Check if there is an intersection between the groups, otherwise the user
+        # doesn't have permission to sign in
+        group_intersection = groups_member_of_g_mconf & groups_user_belongs_to
+
+        # Just in case a user has a "memberof" attribute set on him
+        member_of_group = false
+        if ldap_user.first && ldap_user.first.memberof && ldap_user.first.memberof.is_a?(Array)
+          Rails.logger.info "LDAP: user has a 'memberOf' attribute: #{ldap_user.first.memberof.inspect}"
+          member_of_group = ldap_user.first.memberof.include?(configatron.ufpe.ldap_group)
+        end
+
+        Rails.logger.info "LDAP: user is direct member of group? #{member_of_group}"
+        Rails.logger.info "LDAP: user is member of group through other groups? #{!group_intersection.empty?}"
+        !group_intersection.empty? || member_of_group
       end
 
     end
