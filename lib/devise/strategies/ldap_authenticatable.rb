@@ -221,11 +221,12 @@ module Devise
         # Check if there is an intersection between the groups, otherwise the user
         # doesn't have permission to sign in
         group_intersection = groups_member_of_g_mconf & groups_user_belongs_to
+        Rails.logger.info "LDAP: group intersection: #{group_intersection.inspect}"
 
         # Just in case a user has a "memberof" attribute set on him
         member_of_group = false
-        if ldap_user.first && ldap_user.first.memberof && ldap_user.first.memberof.is_a?(Array)
-          Rails.logger.info "LDAP: user has a 'memberOf' attribute: #{ldap_user.first.memberof.inspect}"
+        if ldap_user.first.try(:memberof) && ldap_user.first.memberof.is_a?(Array)
+          Rails.logger.info "LDAP: user has a 'memberof' attribute: #{ldap_user.first.memberof.inspect}"
           member_of_group = ldap_user.first.memberof.include?(configatron.ufpe.ldap_group)
         end
 
