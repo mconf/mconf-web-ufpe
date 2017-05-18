@@ -29,4 +29,5 @@ configatron.configure_from_hash(config)
 # loaded.
 configatron.modules.events.loaded = false
 
-configatron.ufpe.ldap_group = "CN=g_mconf,CN=Builtin,DC=ufpe,DC=br"
+# Example:
+# configatron.ufpe.ldap_group = "CN=g_mconf,CN=Builtin,DC=ufpe,DC=br"
